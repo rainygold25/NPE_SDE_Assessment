@@ -43,8 +43,6 @@ cd NPE_SDE_Assessment
 
 ---
 
-## 3. Create the environment file
-
 Copy the provided environment template.
 
 ### macOS / Linux
@@ -70,7 +68,7 @@ Only the **Supabase Publishable (Anon)** key should be used in the frontend.
 
 ---
 
-## 4. Install dependencies
+## 3. Install dependencies
 
 ```bash
 npm install
@@ -78,7 +76,7 @@ npm install
 
 ---
 
-## 5. Start the development server
+## 4. Start the development server
 
 ```bash
 npm run dev
@@ -108,26 +106,6 @@ src/
 ├── constants.js
 ├── index.css
 └── main.jsx
-```
-
----
-
-# Supabase Requirements
-
-This project requires:
-
-- Anonymous Authentication enabled
-- A `tasks` table
-- Row Level Security enabled
-- RLS policies restricting each user to their own tasks
-
-Anonymous Authentication can be enabled in:
-
-```
-Supabase Dashboard
-→ Authentication
-→ Providers
-→ Anonymous
 ```
 
 ---
