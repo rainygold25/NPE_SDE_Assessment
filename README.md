@@ -1,16 +1,150 @@
-# React + Vite
+# Kanban Task Board
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+The application allows anonymous guest users to create, organize, and manage tasks on a Kanban board. Data is securely stored in Supabase, and Row Level Security (RLS) ensures each user can only access their own tasks.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Features
 
-## React Compiler
+- Anonymous guest authentication
+- Create new tasks
+- Drag and drop tasks between Kanban columns
+- Persistent task storage with Supabase
+- Row Level Security (RLS)
+- Loading and error states
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the Oxlint configuration
+## Prerequisites
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+Install the following before running the project:
+
+- Node.js (LTS)
+- npm
+- Git
+
+---
+
+# Running the Project Locally
+
+## 1. Clone the repository
+
+```bash
+git clone https://github.com/rainygold25/NPE_SDE_Assessment.git
+```
+
+---
+
+## 2. Navigate into the project
+
+```bash
+cd NPE_SDE_Assessment
+```
+
+---
+
+## 3. Create the environment file
+
+Copy the provided environment template.
+
+### macOS / Linux
+
+```bash
+cp .env.example .env.local
+```
+
+### Windows Command Prompt
+
+```bash
+copy .env.example .env.local
+```
+
+The `.env.local` file should contain:
+
+```env
+VITE_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+VITE_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_publishable_key
+```
+
+Only the **Supabase Publishable (Anon)** key should be used in the frontend.
+
+---
+
+## 4. Install dependencies
+
+```bash
+npm install
+```
+
+---
+
+## 5. Start the development server
+
+```bash
+npm run dev
+```
+
+Vite will display a local URL similar to:
+
+```
+http://localhost:5173
+```
+
+Open that URL in your browser.
+
+---
+
+# Project Structure
+
+```
+src/
+├── components/
+│   ├── KanbanColumn.jsx
+│   ├── TaskCard.jsx
+│   └── TaskForm.jsx
+├── lib/
+│   └── supabase.js
+├── App.jsx
+├── constants.js
+├── index.css
+└── main.jsx
+```
+
+---
+
+# Supabase Requirements
+
+This project requires:
+
+- Anonymous Authentication enabled
+- A `tasks` table
+- Row Level Security enabled
+- RLS policies restricting each user to their own tasks
+
+Anonymous Authentication can be enabled in:
+
+```
+Supabase Dashboard
+→ Authentication
+→ Providers
+→ Anonymous
+```
+
+---
+
+## Database Schema
+
+The `tasks` table should contain:
+
+| Column | Type | Description |
+|---------|------|-------------|
+| id | uuid | Primary key |
+| title | text | Required |
+| description | text | Optional |
+| status | text | todo, in_progress, in_review, done |
+| priority | text | Optional |
+| due_date | date | Optional |
+| user_id | uuid | Owner of task |
+| created_at | timestamptz | Auto-generated |
+
+---
