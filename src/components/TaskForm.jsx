@@ -1,4 +1,5 @@
 import { useState } from "react";
+import AssigneePicker from "./AssigneePicker";
 
 const INITIAL_FORM = {
   title: "",
@@ -7,8 +8,9 @@ const INITIAL_FORM = {
   due_date: "",
 };
 
-export default function TaskForm({ onCreateTask, submitting }) {
+export default function TaskForm({ members, onCreateTask, submitting }) {
   const [form, setForm] = useState(INITIAL_FORM);
+  const [assigneeIds, setAssigneeIds] = useState([]);
 
   function updateField(event) {
     const { name, value } = event.target;
@@ -33,10 +35,12 @@ export default function TaskForm({ onCreateTask, submitting }) {
       description: form.description.trim() || null,
       priority: form.priority,
       due_date: form.due_date || null,
+      assigneeIds,
     });
 
     if (created) {
       setForm(INITIAL_FORM);
+      setAssigneeIds([]);
     }
   }
 
@@ -90,7 +94,15 @@ export default function TaskForm({ onCreateTask, submitting }) {
           />
         </label>
       </div>
+      <fieldset className="assignee-fieldset">
+          <legend>Assignees</legend>
 
+          <AssigneePicker
+              members={members}
+              selectedIds={assigneeIds}
+              onChange={setAssigneeIds}
+          />
+      </fieldset>
       <button type="submit" disabled={submitting}>
         {submitting ? "Creating..." : "Create task"}
       </button>

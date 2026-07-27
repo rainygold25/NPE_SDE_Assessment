@@ -182,3 +182,37 @@
     border-right-color: var(--border);
   }
 }
+
+.task-assignee-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.task-assignees {
+  display: flex;
+  align-items: center;
+}
+
+.task-avatar {
+  display: inline-grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 2px solid white;
+  border-radius: 50%;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.18);
+}
+
+.task-avatar + .task-avatar {
+  margin-left: -8px;
+}
+
+.assignee-count {
+  color: #64748b;
+  font-size: 0.9rem;
+}

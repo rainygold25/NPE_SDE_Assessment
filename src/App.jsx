@@ -11,6 +11,7 @@ import { supabase } from "./lib/supabase";
 import { COLUMNS, VALID_STATUSES } from "./constants";
 import KanbanColumn from "./components/KanbanColumn";
 import TaskForm from "./components/TaskForm";
+import TeamMemberForm from "./components/TeamMemberForm";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -20,6 +21,9 @@ export default function App() {
   const [submitting, setSubmitting] = useState(false);
   const [updatingTaskId, setUpdatingTaskId] = useState(null);
   const [error, setError] = useState("");
+  const [members, setMembers] = useState([]);
+  const [assignments, setAssignments] = useState([]);
+  const [addingMember, setAddingMember] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -65,7 +69,7 @@ export default function App() {
       }
 
       setUser(session.user);
-      await loadTasks();
+      await loadBoardData(session.user.id);
     } catch (caughtError) {
       setError(caughtError.message || "Unable to start the app.");
     } finally {
@@ -73,21 +77,85 @@ export default function App() {
     }
   }
 
-  async function loadTasks() {
-    const { data, error: loadError } = await supabase
-      .from("tasks")
-      .select(
-        "id, title, description, priority, due_date, status, user_id, created_at"
-      )
-      .order("created_at", {
-        ascending: false,
-      });
+  async function loadBoardData(userId) {
+    const [
+      tasksResult,
+      membersResult,
+      assignmentsResult,
+    ] = await Promise.all([
+      supabase
+        .from("tasks")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false }),
 
-    if (loadError) {
-      throw loadError;
+      supabase
+        .from("team_members")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true }),
+
+      supabase
+        .from("task_assignees")
+        .select("*")
+        .eq("user_id", userId),
+    ]);
+
+    if (tasksResult.error) {
+      throw tasksResult.error;
     }
 
-    setTasks(data ?? []);
+    if (membersResult.error) {
+      throw membersResult.error;
+    }
+
+    if (assignmentsResult.error) {
+      throw assignmentsResult.error;
+    }
+
+    setTasks(tasksResult.data ?? []);
+    setMembers(membersResult.data ?? []);
+    setAssignments(assignmentsResult.data ?? []);
+  }
+
+  async function createMember(memberValues) {
+    if (!user) {
+      setError("Guest session is not ready.");
+      return false;
+    }
+
+    setAddingMember(true);
+    setError("");
+
+    try {
+      const { data, error: memberError } = await supabase
+        .from("team_members")
+        .insert({
+          ...memberValues,
+          user_id: user.id,
+        })
+        .select()
+        .single();
+
+      if (memberError) {
+        throw memberError;
+      }
+
+      setMembers((currentMembers) => [
+        ...currentMembers,
+        data,
+      ]);
+
+      return true;
+    } catch (caughtError) {
+      setError(
+        caughtError.message || "Unable to add team member."
+      );
+
+      return false;
+    } finally {
+      setAddingMember(false);
+    }
   }
 
   async function createTask(taskValues) {
@@ -99,27 +167,66 @@ export default function App() {
     setSubmitting(true);
     setError("");
 
-    const newTask = {
-      ...taskValues,
-      status: "todo",
-      user_id: user.id,
-    };
+    try {
+      const { assigneeIds, ...taskFields } = taskValues;
 
-    const { data, error: createError } = await supabase
-      .from("tasks")
-      .insert(newTask)
-      .select()
-      .single();
+      const { data: createdTask, error: createError } =
+        await supabase
+          .from("tasks")
+          .insert({
+            ...taskFields,
+            status: "todo",
+            user_id: user.id,
+          })
+          .select()
+          .single();
 
-    setSubmitting(false);
+      if (createError) {
+        throw createError;
+      }
 
-    if (createError) {
-      setError(createError.message);
+      let createdAssignments = [];
+
+      if (assigneeIds.length > 0) {
+        const assignmentRows = assigneeIds.map((memberId) => ({
+          task_id: createdTask.id,
+          member_id: memberId,
+          user_id: user.id,
+        }));
+
+        const { data, error: assignmentError } =
+          await supabase
+            .from("task_assignees")
+            .insert(assignmentRows)
+            .select();
+
+        if (assignmentError) {
+          throw assignmentError;
+        }
+
+        createdAssignments = data ?? [];
+      }
+
+      setTasks((currentTasks) => [
+        createdTask,
+        ...currentTasks,
+      ]);
+
+      setAssignments((currentAssignments) => [
+        ...currentAssignments,
+        ...createdAssignments,
+      ]);
+
+      return true;
+    } catch (caughtError) {
+      setError(
+        caughtError.message || "Unable to create task."
+      );
+
       return false;
+    } finally {
+      setSubmitting(false);
     }
-
-    setTasks((currentTasks) => [data, ...currentTasks]);
-    return true;
   }
 
   async function handleDragEnd(event) {
@@ -207,6 +314,19 @@ export default function App() {
     );
   }
 
+  const tasksWithAssignees = tasks.map((task) => {
+    const memberIds = assignments
+      .filter((assignment) => assignment.task_id === task.id)
+      .map((assignment) => assignment.member_id);
+
+    return {
+      ...task,
+      assignees: members.filter((member) =>
+        memberIds.includes(member.id)
+      ),
+    };
+  });
+
   return (
     <main className="app">
       <header className="app-header">
@@ -235,9 +355,40 @@ export default function App() {
         </div>
       )}
 
+      <section className="team-section">
+        <div className="team-header">
+            <h2>Team members</h2>
+
+            <div className="team-member-list">
+            {members.length === 0 ? (
+                <span>No team members yet</span>
+            ) : (
+                members.map((member) => (
+                <div key={member.id} className="team-member">
+                    <span
+                    className="avatar"
+                    style={{ backgroundColor: member.color }}
+                    >
+                    {member.name.charAt(0).toUpperCase()}
+                    </span>
+
+                    <span>{member.name}</span>
+                </div>
+                ))
+            )}
+            </div>
+        </div>
+
+        <TeamMemberForm
+            onCreateMember={createMember}
+            submitting={addingMember}
+        />
+      </section>
+
       <TaskForm
         onCreateTask={createTask}
         submitting={submitting}
+        members={members}
       />
 
       <DndContext
@@ -247,7 +398,7 @@ export default function App() {
       >
         <div className="kanban-board">
           {COLUMNS.map((column) => {
-            const columnTasks = tasks.filter(
+            const columnTasks = tasksWithAssignees.filter(
               (task) => task.status === column.id
             );
 
