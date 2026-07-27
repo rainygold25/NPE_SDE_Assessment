@@ -1,7 +1,7 @@
 import { useDroppable } from "@dnd-kit/core";
 import TaskCard from "./TaskCard";
 
-export default function KanbanColumn({ column, tasks }) {
+export default function KanbanColumn({ column, tasks, onOpenTask }) {
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
   });
@@ -21,7 +21,7 @@ export default function KanbanColumn({ column, tasks }) {
           <p className="empty-column">Drop tasks here</p>
         ) : (
           tasks.map((task) => (
-            <TaskCard key={task.id} task={task} />
+            <TaskCard key={task.id} task={task} onOpenTask={onOpenTask} />
           ))
         )}
       </div>

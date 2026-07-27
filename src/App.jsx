@@ -12,6 +12,7 @@ import { COLUMNS, VALID_STATUSES } from "./constants";
 import KanbanColumn from "./components/KanbanColumn";
 import TaskForm from "./components/TaskForm";
 import TeamMemberForm from "./components/TeamMemberForm";
+import TaskDetailPanel from "./components/TaskDetailPanel";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -24,6 +25,10 @@ export default function App() {
   const [members, setMembers] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [addingMember, setAddingMember] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [comments, setComments] = useState([]);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [submittingComment, setSubmittingComment] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -292,6 +297,83 @@ export default function App() {
     }
   }
 
+  async function loadComments(taskId) {
+    setLoadingComments(true);
+    setError("");
+
+    try {
+      const { data, error: commentsError } = await supabase
+        .from("comments")
+        .select("*")
+        .eq("task_id", taskId)
+        .order("created_at", { ascending: true });
+
+      if (commentsError) {
+        throw commentsError;
+      }
+
+      setComments(data ?? []);
+    } catch (caughtError) {
+      setError(
+        caughtError.message || "Unable to load comments."
+      );
+    } finally {
+      setLoadingComments(false);
+    }
+  }
+
+  async function openTaskDetails(task) {
+    setSelectedTask(task);
+    setComments([]);
+    await loadComments(task.id);
+  }
+
+  function closeTaskDetails() {
+    setSelectedTask(null);
+    setComments([]);
+  }
+
+  async function addComment(body) {
+    if (!user || !selectedTask) {
+      setError("Guest session or task is not available.");
+      return false;
+    }
+
+    setSubmittingComment(true);
+    setError("");
+
+    try {
+      const { data, error: commentError } = await supabase
+        .from("comments")
+        .insert({
+          task_id: selectedTask.id,
+          user_id: user.id,
+          body,
+        })
+        .select()
+        .single();
+
+      if (commentError) {
+        throw commentError;
+      }
+
+      setComments((currentComments) => [
+        ...currentComments,
+        data,
+      ]);
+
+      return true;
+    } catch (caughtError) {
+      setError(
+        caughtError.message || "Unable to post comment."
+      );
+
+      return false;
+    } finally {
+      setSubmittingComment(false);
+    }
+  }
+
   if (loading) {
     return (
       <main className="status-page">
@@ -407,11 +489,21 @@ export default function App() {
                 key={column.id}
                 column={column}
                 tasks={columnTasks}
+                onOpenTask={openTaskDetails}
               />
             );
           })}
         </div>
       </DndContext>
+      <TaskDetailPanel
+        task={selectedTask}
+        comments={comments}
+        loading={loadingComments}
+        submitting={submittingComment}
+        onClose={closeTaskDetails}
+        onAddComment={addComment}
+      />
+
     </main>
   );
 }

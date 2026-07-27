@@ -1,7 +1,7 @@
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 
-export default function TaskCard({ task }) {
+export default function TaskCard({ task, onOpenTask }) {
   const {
     attributes,
     listeners,
@@ -67,6 +67,18 @@ export default function TaskCard({ task }) {
           </span>
         </div>
       )}
+
+      <button
+        type="button"
+        className="task-details-button"
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={(event) => {
+            event.stopPropagation();
+            onOpenTask(task);
+        }}
+        >
+        View details & comments
+      </button>
     </article>
   );
 }
