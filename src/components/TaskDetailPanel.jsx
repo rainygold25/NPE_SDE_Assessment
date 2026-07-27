@@ -90,6 +90,28 @@ export default function TaskDetailPanel({
             </section>
           )}
 
+          {task.labels?.length > 0 && (
+            <section className="task-detail-section">
+                <h3>Labels</h3>
+
+                <div className="task-labels">
+                {task.labels.map((label) => (
+                    <span
+                    key={label.id}
+                    className="task-label"
+                    style={{
+                        backgroundColor: `${label.color}18`,
+                        borderColor: label.color,
+                        color: label.color,
+                    }}
+                    >
+                    {label.name}
+                    </span>
+                ))}
+                </div>
+            </section>
+          )}
+
           <section className="comments-section">
             <h3>Comments</h3>
 

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import AssigneePicker from "./AssigneePicker";
+import LabelPicker from "./LabelPicker";
 
 const INITIAL_FORM = {
   title: "",
@@ -8,9 +9,10 @@ const INITIAL_FORM = {
   due_date: "",
 };
 
-export default function TaskForm({ members, onCreateTask, submitting }) {
+export default function TaskForm({ members, labels, onCreateTask, submitting }) {
   const [form, setForm] = useState(INITIAL_FORM);
   const [assigneeIds, setAssigneeIds] = useState([]);
+  const [labelIds, setLabelIds] = useState([]);
 
   function updateField(event) {
     const { name, value } = event.target;
@@ -36,11 +38,13 @@ export default function TaskForm({ members, onCreateTask, submitting }) {
       priority: form.priority,
       due_date: form.due_date || null,
       assigneeIds,
+      labelIds
     });
 
     if (created) {
       setForm(INITIAL_FORM);
       setAssigneeIds([]);
+      setLabelIds([]);
     }
   }
 
@@ -102,6 +106,15 @@ export default function TaskForm({ members, onCreateTask, submitting }) {
               selectedIds={assigneeIds}
               onChange={setAssigneeIds}
           />
+      </fieldset>
+      <fieldset className="label-fieldset">
+        <legend>Labels</legend>
+
+        <LabelPicker
+            labels={labels}
+            selectedIds={labelIds}
+            onChange={setLabelIds}
+        />
       </fieldset>
       <button type="submit" disabled={submitting}>
         {submitting ? "Creating..." : "Create task"}

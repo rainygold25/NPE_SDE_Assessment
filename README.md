@@ -41,6 +41,8 @@ git clone https://github.com/rainygold25/NPE_SDE_Assessment.git
 cd NPE_SDE_Assessment
 ```
 
+---
+
 ## 3. Install dependencies
 
 ```bash
@@ -80,22 +82,5 @@ src/
 ├── index.css
 └── main.jsx
 ```
-
----
-
-## Database Schema
-
-The `tasks` table should contain:
-
-| Column | Type | Description |
-|---------|------|-------------|
-| id | uuid | Primary key |
-| title | text | Required |
-| description | text | Optional |
-| status | text | todo, in_progress, in_review, done |
-| priority | text | Optional |
-| due_date | date | Optional |
-| user_id | uuid | Owner of task |
-| created_at | timestamptz | Auto-generated |
 
 ---

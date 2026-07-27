@@ -46,6 +46,24 @@ export default function TaskCard({ task, onOpenTask }) {
         </p>
       )}
 
+      {task.labels?.length > 0 && (
+        <div className="task-labels">
+            {task.labels.map((label) => (
+            <span
+                key={label.id}
+                className="task-label"
+                style={{
+                backgroundColor: `${label.color}18`,
+                borderColor: label.color,
+                color: label.color,
+                }}
+            >
+                {label.name}
+            </span>
+            ))}
+        </div>
+      )}
+
       {task.assignees?.length > 0 && (
         <div className="task-assignee-row">
           <div className="task-assignees">

@@ -13,6 +13,7 @@ import KanbanColumn from "./components/KanbanColumn";
 import TaskForm from "./components/TaskForm";
 import TeamMemberForm from "./components/TeamMemberForm";
 import TaskDetailPanel from "./components/TaskDetailPanel";
+import LabelForm from "./components/LabelForm";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -29,6 +30,10 @@ export default function App() {
   const [comments, setComments] = useState([]);
   const [loadingComments, setLoadingComments] = useState(false);
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [labels, setLabels] = useState([]);
+  const [taskLabels, setTaskLabels] = useState([]);
+  const [addingLabel, setAddingLabel] = useState(false);
+  const [selectedLabelId, setSelectedLabelId] = useState("all");
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -87,6 +92,8 @@ export default function App() {
       tasksResult,
       membersResult,
       assignmentsResult,
+      labelsResult,
+      taskLabelsResult,
     ] = await Promise.all([
       supabase
         .from("tasks")
@@ -104,6 +111,17 @@ export default function App() {
         .from("task_assignees")
         .select("*")
         .eq("user_id", userId),
+
+      supabase
+        .from("labels")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true }),
+
+      supabase
+        .from("task_labels")
+        .select("*")
+        .eq("user_id", userId),
     ]);
 
     if (tasksResult.error) {
@@ -118,9 +136,19 @@ export default function App() {
       throw assignmentsResult.error;
     }
 
+    if (labelsResult.error) {
+      throw labelsResult.error;
+    }
+
+    if (taskLabelsResult.error) {
+      throw taskLabelsResult.error;
+    }
+
     setTasks(tasksResult.data ?? []);
     setMembers(membersResult.data ?? []);
     setAssignments(assignmentsResult.data ?? []);
+    setLabels(labelsResult.data ?? []);
+    setTaskLabels(taskLabelsResult.data ?? []);
   }
 
   async function createMember(memberValues) {
@@ -173,7 +201,11 @@ export default function App() {
     setError("");
 
     try {
-      const { assigneeIds, ...taskFields } = taskValues;
+      const {
+        assigneeIds,
+        labelIds,
+        ...taskFields
+      } = taskValues;
 
       const { data: createdTask, error: createError } =
         await supabase
@@ -191,6 +223,7 @@ export default function App() {
       }
 
       let createdAssignments = [];
+      let createdTaskLabels = [];
 
       if (assigneeIds.length > 0) {
         const assignmentRows = assigneeIds.map((memberId) => ({
@@ -212,6 +245,26 @@ export default function App() {
         createdAssignments = data ?? [];
       }
 
+      if (labelIds.length > 0) {
+        const labelRows = labelIds.map((labelId) => ({
+          task_id: createdTask.id,
+          label_id: labelId,
+          user_id: user.id,
+        }));
+
+        const { data, error: taskLabelError } =
+          await supabase
+            .from("task_labels")
+            .insert(labelRows)
+            .select();
+
+        if (taskLabelError) {
+          throw taskLabelError;
+        }
+
+        createdTaskLabels = data ?? [];
+      }
+
       setTasks((currentTasks) => [
         createdTask,
         ...currentTasks,
@@ -220,6 +273,11 @@ export default function App() {
       setAssignments((currentAssignments) => [
         ...currentAssignments,
         ...createdAssignments,
+      ]);
+
+      setTaskLabels((currentTaskLabels) => [
+        ...currentTaskLabels,
+        ...createdTaskLabels,
       ]);
 
       return true;
@@ -374,6 +432,50 @@ export default function App() {
     }
   }
 
+  async function createLabel(labelValues) {
+    if (!user) {
+      setError("Guest session is not ready.");
+      return false;
+    }
+
+    setAddingLabel(true);
+    setError("");
+
+    try {
+      const { data, error: labelError } = await supabase
+        .from("labels")
+        .insert({
+          ...labelValues,
+          user_id: user.id,
+        })
+        .select()
+        .single();
+
+      if (labelError) {
+        throw labelError;
+      }
+
+      setLabels((currentLabels) => [
+        ...currentLabels,
+        data,
+      ]);
+
+      return true;
+    } catch (caughtError) {
+      if (caughtError.code === "23505") {
+        setError("A label with that name already exists.");
+      } else {
+        setError(
+          caughtError.message || "Unable to create label."
+        );
+      }
+
+      return false;
+    } finally {
+      setAddingLabel(false);
+    }
+  }
+
   if (loading) {
     return (
       <main className="status-page">
@@ -396,18 +498,36 @@ export default function App() {
     );
   }
 
-  const tasksWithAssignees = tasks.map((task) => {
+  const tasksWithDetails = tasks.map((task) => {
     const memberIds = assignments
       .filter((assignment) => assignment.task_id === task.id)
       .map((assignment) => assignment.member_id);
 
+    const labelIds = taskLabels
+      .filter((taskLabel) => taskLabel.task_id === task.id)
+      .map((taskLabel) => taskLabel.label_id);
+
     return {
       ...task,
+
       assignees: members.filter((member) =>
         memberIds.includes(member.id)
       ),
+
+      labels: labels.filter((label) =>
+        labelIds.includes(label.id)
+      ),
     };
   });
+
+  const filteredTasks =
+    selectedLabelId === "all"
+      ? tasksWithDetails
+      : tasksWithDetails.filter((task) =>
+          task.labels.some(
+            (label) => label.id === selectedLabelId
+          )
+        );
 
   return (
     <main className="app">
@@ -467,10 +587,50 @@ export default function App() {
         />
       </section>
 
+      <section className="labels-section">
+        <div className="labels-section-header">
+          <div>
+            <h2>Labels</h2>
+
+            <div className="labels-list">
+              {labels.length === 0 ? (
+                <span className="labels-empty">
+                  No labels created yet
+                </span>
+              ) : (
+                labels.map((label) => (
+                  <span
+                    key={label.id}
+                    className="label-chip"
+                    style={{
+                      borderColor: label.color,
+                      color: label.color,
+                    }}
+                  >
+                    <span
+                      className="label-color-dot"
+                      style={{ backgroundColor: label.color }}
+                    />
+
+                    {label.name}
+                  </span>
+                ))
+              )}
+            </div>
+          </div>
+
+          <LabelForm
+            onCreateLabel={createLabel}
+            submitting={addingLabel}
+          />
+        </div>
+      </section>
+
       <TaskForm
         onCreateTask={createTask}
         submitting={submitting}
         members={members}
+        labels={labels}
       />
 
       <DndContext
@@ -478,9 +638,40 @@ export default function App() {
         collisionDetection={closestCenter}
         onDragEnd={handleDragEnd}
       >
+        <div className="board-filter">
+          <label htmlFor="label-filter">
+            Filter by label
+          </label>
+
+          <select
+            id="label-filter"
+            value={selectedLabelId}
+            onChange={(event) =>
+              setSelectedLabelId(event.target.value)
+            }
+          >
+            <option value="all">All labels</option>
+
+            {labels.map((label) => (
+              <option key={label.id} value={label.id}>
+                {label.name}
+              </option>
+            ))}
+          </select>
+
+          {selectedLabelId !== "all" && (
+            <button
+              type="button"
+              className="clear-filter-button"
+              onClick={() => setSelectedLabelId("all")}
+            >
+              Clear filter
+            </button>
+          )}
+        </div>
         <div className="kanban-board">
           {COLUMNS.map((column) => {
-            const columnTasks = tasksWithAssignees.filter(
+            const columnTasks = filteredTasks.filter(
               (task) => task.status === column.id
             );
 
