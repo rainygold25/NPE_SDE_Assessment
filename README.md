@@ -7,11 +7,19 @@ The application allows anonymous guest users to create, organize, and manage tas
 ## Features
 
 - Anonymous guest authentication
-- Create new tasks
+- Create, edit, and organize tasks on a Kanban board
 - Drag and drop tasks between Kanban columns
+- Team management with custom members and colored avatars
+- Assign one or more team members to each task
+- Custom labels/tags with color selection
+- Assign multiple labels to tasks
+- Filter tasks by label
+- Task detail panel with comments
+- Chronological task comments with timestamps
+- Due date indicators for upcoming, due soon, and overdue tasks
 - Persistent task storage with Supabase
-- Row Level Security (RLS)
-- Loading and error states
+- Row Level Security (RLS) for all user data
+- Loading and error states throughout the application
 
 ---
 
@@ -72,9 +80,14 @@ Open that URL in your browser.
 ```
 src/
 ├── components/
+│   ├── AssigneePicker.jsx
 │   ├── KanbanColumn.jsx
+│   ├── LabelForm.jsx
+│   ├── LabelPicker.jsx
 │   ├── TaskCard.jsx
-│   └── TaskForm.jsx
+│   ├── TaskDetailPanel.jsx
+│   ├── TaskForm.jsx
+│   └── TeamMemberForm.jsx
 ├── lib/
 │   └── supabase.js
 ├── App.jsx

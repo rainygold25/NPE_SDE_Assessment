@@ -1,6 +1,53 @@
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 
+function getDueDateStatus(dueDate) {
+  if (!dueDate) {
+    return null;
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const due = new Date(`${dueDate}T00:00:00`);
+  due.setHours(0, 0, 0, 0);
+
+  const differenceInMilliseconds = due - today;
+  const differenceInDays = Math.round(
+    differenceInMilliseconds / (1000 * 60 * 60 * 24)
+  );
+
+  if (differenceInDays < 0) {
+    return {
+      type: "overdue",
+      label: "Overdue",
+      icon: "⚠",
+    };
+  }
+
+  if (differenceInDays === 0) {
+    return {
+      type: "due-soon",
+      label: "Due today",
+      icon: "⏰",
+    };
+  }
+
+  if (differenceInDays <= 3) {
+    return {
+      type: "due-soon",
+      label: `Due in ${differenceInDays} days`,
+      icon: "⏰",
+    };
+  }
+
+  return {
+    type: "upcoming",
+    label: "Upcoming",
+    icon: "📅",
+  };
+}
+
 export default function TaskCard({ task, onOpenTask }) {
   const {
     attributes,
@@ -12,6 +59,8 @@ export default function TaskCard({ task, onOpenTask }) {
     id: task.id,
   });
 
+  const dueDateStatus = getDueDateStatus(task.due_date);
+
   const style = {
     transform: CSS.Translate.toString(transform),
     opacity: isDragging ? 0.5 : 1,
@@ -20,11 +69,15 @@ export default function TaskCard({ task, onOpenTask }) {
 
   return (
     <article
-      ref={setNodeRef}
-      style={style}
-      {...listeners}
-      {...attributes}
-      className="task-card"
+        ref={setNodeRef}
+        style={style}
+        {...listeners}
+        {...attributes}
+        className={`task-card ${
+            dueDateStatus?.type
+            ? `task-card-${dueDateStatus.type}`
+            : ""
+        }`}
     >
       <div className="task-card-header">
         <h3>{task.title}</h3>
@@ -41,9 +94,25 @@ export default function TaskCard({ task, onOpenTask }) {
       )}
 
       {task.due_date && (
-        <p className="due-date">
-          Due: {new Date(task.due_date).toLocaleDateString()}
-        </p>
+        <div className="task-due-date-row">
+            <span
+            className={`due-date-badge ${
+                dueDateStatus?.type ?? ""
+            }`}
+            >
+            <span aria-hidden="true">
+                {dueDateStatus?.icon}
+            </span>
+
+            {dueDateStatus?.label}
+            </span>
+
+            <span className="due-date-value">
+            {new Date(
+                `${task.due_date}T00:00:00`
+            ).toLocaleDateString()}
+            </span>
+        </div>
       )}
 
       {task.labels?.length > 0 && (
