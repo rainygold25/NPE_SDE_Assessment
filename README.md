@@ -41,33 +41,6 @@ git clone https://github.com/rainygold25/NPE_SDE_Assessment.git
 cd NPE_SDE_Assessment
 ```
 
----
-
-Copy the provided environment template.
-
-### macOS / Linux
-
-```bash
-cp .env.example .env.local
-```
-
-### Windows Command Prompt
-
-```bash
-copy .env.example .env.local
-```
-
-The `.env.local` file should contain:
-
-```env
-VITE_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-VITE_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_publishable_key
-```
-
-Only the **Supabase Publishable (Anon)** key should be used in the frontend.
-
----
-
 ## 3. Install dependencies
 
 ```bash
